@@ -1,0 +1,50 @@
+/* Jardim Encantado — Design System */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-garden-green: #7cb98a;
+  --color-garden-green-light: #a8d5b5;
+  --color-garden-green-dark: #4a8a5a;
+  --color-garden-pink: #f4a7b9;
+  --color-garden-pink-light: #fce4ec;
+  --color-garden-pink-dark: #e88fa5;
+  --color-garden-lilac: #c4a8d4;
+  --color-garden-lilac-light: #e8d8f0;
+  --color-garden-lilac-dark: #9b7ab5;
+  --color-garden-gold: #d4af37;
+  --color-garden-gold-light: #f0d060;
+  --color-garden-white: #fdfcf8;
+  --color-garden-cream: #faf6ef;
+  --color-garden-dark: #3d4a3d;
+  --color-garden-text: #4a5568;
+
+  --font-playfair: 'Playfair Display', serif;
+  --font-inter: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-inter);
+  background-color: var(--color-garden-cream);
+  color: var(--color-garden-text);
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-playfair);
+}
+
+.font-playfair {
+  font-family: var(--font-playfair);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-garden-cream); }
+::-webkit-scrollbar-thumb { background: var(--color-garden-lilac); border-radius: 3px; }
