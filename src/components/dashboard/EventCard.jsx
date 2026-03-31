@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Edit2, Users, Copy, Trash2, Calendar, MapPin, Check } from 'lucide-react'
 import { useState } from 'react'
 
-export default function EventCard({ event, onDelete }) {
+export default function EventCard({ event, onDelete, isOwner = true }) {
   const [copied, setCopied] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -77,28 +77,38 @@ export default function EventCard({ event, onDelete }) {
           )}
         </div>
 
-        {/* Slug badge */}
-        <div
-          className="text-xs rounded-xl px-3 py-1.5 mb-4 font-mono truncate"
-          style={{ background: 'rgba(196,168,212,0.15)', color: '#9b7ab5' }}
-        >
-          /convite/{event.slug}
+        {/* Slug badge + badge de colaborador */}
+        <div className="flex items-center gap-2 mb-4">
+          <div
+            className="flex-1 text-xs rounded-xl px-3 py-1.5 font-mono truncate"
+            style={{ background: 'rgba(196,168,212,0.15)', color: '#9b7ab5' }}
+          >
+            /convite/{event.slug}
+          </div>
+          {!isOwner && (
+            <span className="text-xs px-2 py-1 rounded-xl flex-shrink-0"
+              style={{ background: 'rgba(124,185,138,0.2)', color: '#4a8a5a' }}>
+              👥 Colaborador
+            </span>
+          )}
         </div>
 
         {/* Botões de ação */}
         <div className="grid grid-cols-2 gap-2">
-          <Link to={`/eventos/${event.id}/editar`}>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
-              style={{ background: 'rgba(196,168,212,0.2)', color: '#9b7ab5' }}
-            >
-              <Edit2 size={13} /> Editar
-            </motion.button>
-          </Link>
+          {isOwner && (
+            <Link to={`/eventos/${event.id}/editar`}>
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all"
+                style={{ background: 'rgba(196,168,212,0.2)', color: '#9b7ab5' }}
+              >
+                <Edit2 size={13} /> Editar
+              </motion.button>
+            </Link>
+          )}
 
-          <Link to={`/eventos/${event.id}/rsvp`}>
+          <Link to={`/eventos/${event.id}/rsvp`} className={isOwner ? '' : 'col-span-2'}>
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
@@ -124,8 +134,8 @@ export default function EventCard({ event, onDelete }) {
             {copied ? 'Link copiado!' : 'Copiar link do convite'}
           </motion.button>
 
-          {/* Deletar */}
-          {!confirmDelete ? (
+          {/* Deletar — só para o dono */}
+          {isOwner && (!confirmDelete ? (
             <button
               onClick={() => setConfirmDelete(true)}
               className="col-span-2 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium transition-all"
@@ -154,9 +164,10 @@ export default function EventCard({ event, onDelete }) {
                 Cancelar
               </button>
             </motion.div>
-          )}
+          ))}
         </div>
       </div>
     </motion.div>
   )
 }
+

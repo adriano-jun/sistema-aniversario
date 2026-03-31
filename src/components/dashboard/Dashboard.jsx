@@ -5,17 +5,13 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import Navbar from '../shared/Navbar'
 import EventCard from './EventCard'
-import { PlusCircle, Flower2, Sparkles, Calendar } from 'lucide-react'
+import { PlusCircle, Flower2, Sparkles, Users } from 'lucide-react'
 import LoadingSpinner from '../shared/LoadingSpinner'
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 }
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
@@ -24,17 +20,32 @@ const itemVariants = {
 export default function Dashboard() {
   const { user } = useAuth()
   const [events, setEvents] = useState([])
+  const [collabEvents, setCollabEvents] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchEvents = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+
+    // Eventos que o usuário É DONO
+    const { data: ownedData } = await supabase
       .from('events')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (!error) setEvents(data || [])
+    // Eventos em que o usuário É COLABORADOR
+    const { data: collabData } = await supabase
+      .from('event_collaborators')
+      .select('events(*)')
+      .eq('invited_email', user.email)
+
+    setEvents(ownedData || [])
+    // Extrair os eventos da resposta aninhada e excluir os que ele já é dono
+    const collaborated = (collabData || [])
+      .map(c => c.events)
+      .filter(Boolean)
+      .filter(e => e.user_id !== user.id)
+    setCollabEvents(collaborated)
     setLoading(false)
   }
 
@@ -48,6 +59,8 @@ export default function Dashboard() {
   }
 
   if (loading) return <LoadingSpinner text="Carregando seus eventos..." />
+
+  const totalEvents = events.length + collabEvents.length
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(160deg, #fce4ec 0%, #faf6ef 40%, #e8f5e9 100%)' }}>
@@ -64,9 +77,7 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Flower2 size={20} style={{ color: '#c4a8d4' }} />
-              <span className="text-sm font-medium" style={{ color: '#9b7ab5' }}>
-                Seus Eventos
-              </span>
+              <span className="text-sm font-medium" style={{ color: '#9b7ab5' }}>Seus Eventos</span>
             </div>
             <h1 className="font-playfair text-4xl font-bold" style={{ color: '#3d4a3d' }}>
               Dashboard 🌸
@@ -90,17 +101,18 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Estatísticas rápidas */}
-        {events.length > 0 && (
+        {totalEvents > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8"
           >
             {[
-              { label: 'Total de Eventos', value: events.length, icon: '🎉', color: '#c4a8d4' },
-              { label: 'Este Mês', value: events.filter(e => new Date(e.created_at).getMonth() === new Date().getMonth()).length, icon: '📅', color: '#7cb98a' },
-              { label: 'Próximos', value: events.filter(e => e.data && new Date(e.data) >= new Date()).length, icon: '✨', color: '#f4a7b9' },
+              { label: 'Meus Eventos', value: events.length, icon: '🎉', color: '#c4a8d4' },
+              { label: 'Colaborando', value: collabEvents.length, icon: '👥', color: '#7cb98a' },
+              { label: 'Este Mês', value: events.filter(e => new Date(e.created_at).getMonth() === new Date().getMonth()).length, icon: '📅', color: '#f4a7b9' },
+              { label: 'Próximos', value: [...events, ...collabEvents].filter(e => e.data && new Date(e.data + 'T00:00:00') >= new Date()).length, icon: '✨', color: '#d4af37' },
             ].map((stat) => (
               <div
                 key={stat.label}
@@ -115,12 +127,11 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Lista de eventos */}
-        {events.length === 0 ? (
+        {/* ===== MEUS EVENTOS ===== */}
+        {events.length === 0 && collabEvents.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
             className="text-center py-20"
           >
             <motion.div
@@ -149,18 +160,52 @@ export default function Dashboard() {
             </Link>
           </motion.div>
         ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {events.map(event => (
-              <motion.div key={event.id} variants={itemVariants}>
-                <EventCard event={event} onDelete={handleDelete} />
-              </motion.div>
-            ))}
-          </motion.div>
+          <>
+            {/* Meus eventos */}
+            {events.length > 0 && (
+              <div className="mb-10">
+                <h2 className="font-playfair text-xl font-bold mb-4 flex items-center gap-2" style={{ color: '#3d4a3d' }}>
+                  <Flower2 size={18} style={{ color: '#c4a8d4' }} /> Meus Eventos
+                </h2>
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {events.map(event => (
+                    <motion.div key={event.id} variants={itemVariants}>
+                      <EventCard event={event} onDelete={handleDelete} isOwner />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+            )}
+
+            {/* Eventos colaborados */}
+            {collabEvents.length > 0 && (
+              <div>
+                <h2 className="font-playfair text-xl font-bold mb-4 flex items-center gap-2" style={{ color: '#3d4a3d' }}>
+                  <Users size={18} style={{ color: '#7cb98a' }} /> Eventos que Colaboro
+                  <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'rgba(124,185,138,0.2)', color: '#4a8a5a' }}>
+                    Colaborador
+                  </span>
+                </h2>
+                <motion.div
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {collabEvents.map(event => (
+                    <motion.div key={event.id} variants={itemVariants}>
+                      <EventCard event={event} onDelete={null} isOwner={false} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

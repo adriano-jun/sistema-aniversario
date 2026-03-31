@@ -12,6 +12,7 @@ import {
   CreditCard, Gift, Hash, User, Flower2, AlertCircle
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import CollaboratorsPanel from './CollaboratorsPanel'
 
 const fields = [
   {
@@ -213,7 +214,13 @@ export default function EventForm() {
             ))}
           </div>
 
+          {/* Colaboradores — só em eventos já criados */}
+          {isEditing && (
+            <CollaboratorsPanel eventId={id} isOwner={true} />
+          )}
+
           {/* Erro global */}
+
           <AnimatePresence>
             {error && (
               <motion.div
