@@ -41,8 +41,10 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
     if (error) {
       if (error.code === '23505') {
         setError('Este e-mail já é colaborador deste evento.')
+      } else if (error.code === '42P01') {
+        setError('⚠️ Tabela de colaboradores não encontrada. Execute o arquivo supabase/migration_collaborators.sql no Supabase SQL Editor.')
       } else {
-        setError('Erro ao adicionar colaborador. Tente novamente.')
+        setError(`Erro: ${error.message}`)
       }
     } else {
       setSuccess(`${email} adicionado como ${role === 'editor' ? 'Editor' : 'Visualizador'}!`)
