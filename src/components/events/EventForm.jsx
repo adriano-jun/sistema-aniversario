@@ -111,25 +111,37 @@ export default function EventForm() {
     }
   }, [id, isEditing, user, navigate, reset])
 
+  // Converte campos vazios para null (evita erro de tipo no Supabase)
+  const sanitize = (data) => {
+    const result = {}
+    for (const key in data) {
+      const val = data[key]
+      result[key] = (val === '' || val === undefined) ? null : val
+    }
+    return result
+  }
+
   const onSubmit = async (formData) => {
     setSaving(true)
     setError('')
+
+    const cleanData = sanitize(formData)
 
     try {
       if (isEditing) {
         // Editar
         const { error } = await supabase
           .from('events')
-          .update({ ...formData, user_id: user.id })
+          .update({ ...cleanData, user_id: user.id })
           .eq('id', id)
           .eq('user_id', user.id)
         if (error) throw error
       } else {
         // Criar com slug único
-        const slug = generateUniqueSlug(formData.nome_evento || 'evento')
+        const slug = generateUniqueSlug(cleanData.nome_evento || 'evento')
         const { error } = await supabase
           .from('events')
-          .insert({ ...formData, user_id: user.id, slug })
+          .insert({ ...cleanData, user_id: user.id, slug })
         if (error) throw error
       }
       navigate('/')
