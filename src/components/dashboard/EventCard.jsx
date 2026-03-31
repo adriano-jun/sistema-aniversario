@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Edit2, Users, Copy, Trash2, Calendar, MapPin, Check } from 'lucide-react'
+import { Edit2, Users, Copy, Trash2, Calendar, MapPin, Check, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 
 export default function EventCard({ event, onDelete, isOwner = true }) {
@@ -13,6 +13,13 @@ export default function EventCard({ event, onDelete, isOwner = true }) {
     await navigator.clipboard.writeText(inviteUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const shareWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `🦋 Você está convidado!\n\nVeja o convite de *${event.nome_aniversariante || event.nome_evento}*:\n${inviteUrl}`
+    )
+    window.open(`https://wa.me/?text=${msg}`, '_blank')
   }
 
   const formatDate = (dateStr) => {
@@ -132,6 +139,18 @@ export default function EventCard({ event, onDelete, isOwner = true }) {
           >
             {copied ? <Check size={13} /> : <Copy size={13} />}
             {copied ? 'Link copiado!' : 'Copiar link do convite'}
+          </motion.button>
+
+          {/* Compartilhar no WhatsApp */}
+          <motion.button
+            onClick={shareWhatsApp}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="col-span-2 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all text-white"
+            style={{ background: 'linear-gradient(135deg, #25D366, #128C7E)' }}
+          >
+            <MessageCircle size={13} />
+            Compartilhar no WhatsApp
           </motion.button>
 
           {/* Deletar — só para o dono */}
