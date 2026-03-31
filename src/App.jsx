@@ -6,6 +6,7 @@ import Dashboard from './components/dashboard/Dashboard'
 import EventForm from './components/events/EventForm'
 import InvitePage from './components/invite/InvitePage'
 import RSVPDashboard from './components/rsvp/RSVPDashboard'
+import CollaborationAccept from './components/events/CollaborationAccept'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           {/* Área pública */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/convite/:slug" element={<InvitePage />} />
+          <Route path="/colaborar/:eventId" element={<CollaborationAccept />} />
 
           {/* Área privada (requer login) */}
           <Route element={<PrivateRoute />}>

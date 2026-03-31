@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
-import { UserPlus, Trash2, Mail, Shield, Eye, AlertCircle, Crown } from 'lucide-react'
+import { UserPlus, Trash2, Mail, Shield, Eye, AlertCircle, Copy, Check, Link2 } from 'lucide-react'
 
 export default function CollaboratorsPanel({ eventId, isOwner }) {
   const [collaborators, setCollaborators] = useState([])
@@ -11,15 +11,25 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [linkCopied, setLinkCopied] = useState(null)
 
   const fetchCollaborators = async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('event_collaborators')
       .select('*')
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })
-    setCollaborators(data || [])
+
+    if (error) {
+      if (error.code === '42P01') {
+        setError('⚠️ Execute o SQL de migração no Supabase (supabase/migration_collaborators.sql)')
+      } else {
+        setError(`Erro ao carregar colaboradores: ${error.message}`)
+      }
+    } else {
+      setCollaborators(data || [])
+    }
     setLoading(false)
   }
 
@@ -42,22 +52,29 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
       if (error.code === '23505') {
         setError('Este e-mail já é colaborador deste evento.')
       } else if (error.code === '42P01') {
-        setError('⚠️ Tabela de colaboradores não encontrada. Execute o arquivo supabase/migration_collaborators.sql no Supabase SQL Editor.')
+        setError('⚠️ Tabela não encontrada. Execute supabase/migration_collaborators.sql no Supabase.')
       } else {
         setError(`Erro: ${error.message}`)
       }
     } else {
-      setSuccess(`${email} adicionado como ${role === 'editor' ? 'Editor' : 'Visualizador'}!`)
+      setSuccess(`✅ ${email.trim()} adicionado como ${role === 'editor' ? 'Editor' : 'Visualizador'}!`)
       setEmail('')
-      fetchCollaborators()
-      setTimeout(() => setSuccess(''), 3000)
+      await fetchCollaborators()
+      setTimeout(() => setSuccess(''), 4000)
     }
     setAdding(false)
   }
 
   const removeCollaborator = async (id) => {
-    await supabase.from('event_collaborators').delete().eq('id', id)
-    setCollaborators(prev => prev.filter(c => c.id !== id))
+    const { error } = await supabase.from('event_collaborators').delete().eq('id', id)
+    if (!error) setCollaborators(prev => prev.filter(c => c.id !== id))
+  }
+
+  const copyInviteLink = async (roleParam) => {
+    const url = `${window.location.origin}/colaborar/${eventId}?role=${roleParam}`
+    await navigator.clipboard.writeText(url)
+    setLinkCopied(roleParam)
+    setTimeout(() => setLinkCopied(null), 2500)
   }
 
   if (!isOwner) return null
@@ -70,17 +87,18 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
         border: '1px solid rgba(196,168,212,0.25)',
       }}
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-1">
         <UserPlus size={18} style={{ color: '#c4a8d4' }} />
         <h2 className="font-playfair text-lg font-semibold" style={{ color: '#3d4a3d' }}>
           👥 Colaboradores
         </h2>
       </div>
       <p className="text-xs mb-5" style={{ color: '#9b7ab5' }}>
-        Convide outras pessoas para visualizar ou editar este evento. Elas precisam ter uma conta no sistema.
+        Convide por e-mail (conta necessária) ou compartilhe um link de acesso direto.
       </p>
 
-      {/* Formulário de convite */}
+      {/* ===== CONVIDAR POR E-MAIL ===== */}
+      <p className="text-xs font-medium mb-2" style={{ color: '#4a5568' }}>Convidar por e-mail</p>
       <form onSubmit={addCollaborator} className="flex flex-col sm:flex-row gap-2 mb-5">
         <div className="relative flex-1">
           <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#c4a8d4' }} />
@@ -98,8 +116,6 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
             }}
           />
         </div>
-
-        {/* Papel */}
         <select
           value={role}
           onChange={e => setRole(e.target.value)}
@@ -113,7 +129,6 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
           <option value="editor">✏️ Editor</option>
           <option value="viewer">👁️ Visualizador</option>
         </select>
-
         <motion.button
           type="submit"
           disabled={adding}
@@ -123,16 +138,33 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
           style={{ background: 'linear-gradient(135deg, #c4a8d4, #7cb98a)', minWidth: '90px' }}
         >
           {adding ? (
-            <motion.span
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-              className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-            />
+            <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+              className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
           ) : (
             <><UserPlus size={14} /> Convidar</>
           )}
         </motion.button>
       </form>
+
+      {/* ===== CONVIDAR POR LINK ===== */}
+      <p className="text-xs font-medium mb-2" style={{ color: '#4a5568' }}>Convidar por link (sem e-mail)</p>
+      <div className="flex gap-2 mb-5">
+        {[
+          { role: 'editor', label: '✏️ Link Editor', color: '#c4a8d4' },
+          { role: 'viewer', label: '👁️ Link Visualizador', color: '#7cb98a' },
+        ].map(item => (
+          <motion.button
+            key={item.role}
+            onClick={() => copyInviteLink(item.role)}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium text-white"
+            style={{ background: linkCopied === item.role ? '#4a8a5a' : item.color }}
+          >
+            {linkCopied === item.role ? <><Check size={12} /> Copiado!</> : <><Link2 size={12} /> {item.label}</>}
+          </motion.button>
+        ))}
+      </div>
 
       {/* Feedback */}
       <AnimatePresence>
@@ -147,7 +179,7 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
           <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             className="text-xs p-2.5 rounded-xl mb-3"
             style={{ background: 'rgba(124,185,138,0.2)', color: '#4a8a5a' }}>
-            ✅ {success}
+            {success}
           </motion.p>
         )}
       </AnimatePresence>
@@ -162,15 +194,9 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
       ) : (
         <motion.div className="space-y-2">
           {collaborators.map(c => (
-            <motion.div
-              key={c.id}
-              layout
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
+            <motion.div key={c.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
               className="flex items-center justify-between p-3 rounded-xl"
-              style={{ background: 'rgba(196,168,212,0.1)' }}
-            >
+              style={{ background: 'rgba(196,168,212,0.1)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs"
                   style={{ background: c.role === 'editor' ? 'linear-gradient(135deg,#c4a8d4,#7cb98a)' : '#f4a7b9' }}>
@@ -179,17 +205,14 @@ export default function CollaboratorsPanel({ eventId, isOwner }) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#3d4a3d' }}>{c.invited_email}</p>
                   <p className="text-xs" style={{ color: '#9b7ab5' }}>
-                    {c.role === 'editor' ? '✏️ Editor — pode editar o evento' : '👁️ Visualizador — só pode ver'}
+                    {c.role === 'editor' ? '✏️ Editor' : '👁️ Visualizador'}
                   </p>
                 </div>
               </div>
-              <motion.button
-                onClick={() => removeCollaborator(c.id)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+              <motion.button onClick={() => removeCollaborator(c.id)}
+                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                 className="p-1.5 rounded-lg"
-                style={{ color: '#e88fa5', background: 'rgba(244,167,185,0.15)' }}
-              >
+                style={{ color: '#e88fa5', background: 'rgba(244,167,185,0.15)' }}>
                 <Trash2 size={13} />
               </motion.button>
             </motion.div>
