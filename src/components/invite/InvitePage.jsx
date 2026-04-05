@@ -177,11 +177,6 @@ export default function InvitePage() {
               ✨ Você está convidado ✨
             </p>
 
-            {/* Nome do aniversariante */}
-            <h1 className="font-playfair italic text-5xl font-bold mb-1" style={{ color: '#3d4a3d' }}>
-              {event.nome_aniversariante || 'Maria Alice'}
-            </h1>
-
             {/* Idade */}
             {event.idade && (
               <motion.div
